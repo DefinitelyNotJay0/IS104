@@ -1,26 +1,65 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Badge from '../components/ui/Badge.jsx'
+import StatCard from '../components/ui/StatCard.jsx'
 import { staff } from '../data/mock.js'
-import { suggestStaff, workload } from '../utils/helpers.js'
-const RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 }
+import { ACTIVE, PRIORITY_RANK, suggestStaff, workload } from '../utils/helpers.js'
+
 export default function StaffAssignments() {
   const { concerns, setReviewing } = useApp()
-  const pending = concerns.filter((c) => c.status === 'Pending').sort((a, b) => RANK[a.priority] - RANK[b.priority])
-  const [sel, setSel] = useState(null)
-  const pc = pending.find((c) => c.id === sel) || pending[0]
-  const rec = pc && suggestStaff(staff, concerns, pc.category)
-  const active = concerns.filter((c) => ['In Progress', 'For Verification'].includes(c.status)).length
+  const [selectedId, setSelectedId] = useState(null)
+  const pending = concerns.filter((c) => c.status === 'Pending')
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.createdAt - a.createdAt)
+  const selected = pending.find((c) => c.id === selectedId) || pending[0]
+  const recommendation = selected && suggestStaff(staff, concerns, selected.category)
+  const active = concerns.filter((c) => ACTIVE.includes(c.status)).length
+  const recommendedWorkload = recommendation && workload(concerns, recommendation.name)
+
   return (
     <>
-      <div><p className="text-[10px] font-bold text-brand">CAMPUS OPERATIONS</p><h1 className="text-2xl font-bold">The right repair. The right person.</h1><p className="text-xs text-slate-500">Route each concern to maintenance personnel by reviewed priority and expertise.</p></div>
-      <div className="card p-4 flex gap-10 text-sm"><span><b className="text-2xl">{staff.length}</b> Maintenance staff</span><span><b className="text-2xl">{active}</b> Active repairs</span><span><b className="text-2xl">{pending.length}</b> Awaiting assignment</span></div>
-      <div className="grid md:grid-cols-3 gap-4">{staff.map((m) => { const w = workload(concerns, m.name); return <div key={m.id} className={`card p-4 ${rec?.id === m.id ? 'border-brand ring-2 ring-brand/20' : ''}`}><b>{m.name}</b><p className="text-xs text-slate-400">{m.role}</p><p className="text-[11px] mt-1">Handles: {m.skills.join(', ')}</p><p className="mt-3"><b className="text-2xl">{w}</b> <span className="text-xs">active repairs</span></p><div className="h-1.5 bg-slate-100 rounded mt-2"><div className="h-1.5 bg-brand rounded" style={{ width: `${Math.min(w * 25, 100)}%` }} /></div></div> })}</div>
-      <div className="grid lg:grid-cols-[1fr_340px] gap-4">
-        <div className="card p-5 space-y-3"><b className="text-sm">Next to assign</b>{pending.map((c) => <button key={c.id} onClick={() => setSel(c.id)} className={`w-full text-left border rounded-lg p-3 text-sm flex justify-between ${pc?.id === c.id ? 'border-brand bg-brand-soft' : ''}`}><div><b>{c.title}</b><p className="text-[11px] text-slate-400">{c.id} · {c.facility} · {c.loc} · {c.category}</p></div><Badge value={c.priority} /></button>)}{!pending.length && <p className="text-xs text-slate-400">All concerns have been assigned.</p>}</div>
-        {pc && <div className="card p-5 text-sm h-fit"><b>Assignment preview</b><p className="text-xs text-slate-400">No changes until you confirm the review.</p><p className="mt-3 text-xs text-slate-500">{pc.id} · {pc.title}</p><p className="mt-2 font-semibold">{rec.name}</p><p className="text-xs text-slate-500">{rec.role} matches this concern</p><p className="text-xs bg-brand-soft rounded p-2 mt-2">Active repairs after assignment: <b>{workload(concerns, rec.name)} → {workload(concerns, rec.name) + 1}</b></p><button className="btn w-full justify-center mt-3" onClick={() => setReviewing(pc)}>→ Review priority & assign</button></div>}
+      <div><h1 className="page-title">Staff assignments</h1><p className="page-description">Review workloads and route pending concerns to a maintenance specialist.</p></div>
+      <div className="grid gap-3 min-[480px]:grid-cols-3 sm:gap-4">
+        <StatCard label="Maintenance staff" value={staff.length} note="Team members" />
+        <StatCard label="Active repairs" value={active} note="In progress or awaiting verification" />
+        <StatCard label="Awaiting assignment" value={pending.length} note="Pending review" />
       </div>
-      <p className="text-[11px] text-slate-500">Staff update their own repairs after each session. Priority review and assignment are managed by administrators.</p>
+      <section aria-labelledby="team-workload">
+        <h2 id="team-workload" className="section-title mb-3">Team workload</h2>
+        <ul className="grid gap-3 sm:gap-4 md:grid-cols-3">
+          {staff.map((member) => (
+            <li key={member.id} className="card p-4">
+              <h3 className="font-semibold">{member.name}</h3>
+              <p className="mt-1 text-sm text-slate-600">{member.role}</p>
+              <p className="mt-1 text-xs text-slate-600">{member.skills.join(' · ')}</p>
+              <p className="mt-3 text-sm"><strong className="text-xl">{workload(concerns, member.name)}</strong> active repairs</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
+        <section className="card space-y-3 p-4 sm:p-5">
+          <h2 className="section-title">Pending assignments</h2>
+          {pending.map((concern) => (
+            <button key={concern.id} type="button" onClick={() => setSelectedId(concern.id)} aria-pressed={selected?.id === concern.id} className="choice flex w-full flex-wrap items-center justify-between gap-2 p-3 text-left">
+              <span className="min-w-0 flex-1"><strong>{concern.title}</strong><span className="mt-1 block text-xs font-normal text-slate-600">{concern.id} · {concern.facility} · {concern.loc} · {concern.category}</span></span>
+              <Badge value={concern.priority} />
+            </button>
+          ))}
+          {!pending.length && <p className="text-sm text-slate-600">No concerns are waiting for assignment.</p>}
+        </section>
+        {selected && (
+          <section className="card space-y-3 p-4 sm:p-5">
+            <h2 className="section-title">Suggested assignment</h2>
+            <p className="text-sm text-slate-600">{selected.id} · {selected.title}</p>
+            <div className="rounded-xl bg-brand-soft p-3 text-sm">
+              <p className="font-semibold">{recommendation.name}</p>
+              <p className="mt-1 text-slate-700">{recommendation.role}</p>
+              <p className="mt-2 text-slate-700">{recommendedWorkload} active now · {recommendedWorkload + 1} after assignment</p>
+            </div>
+            <button type="button" className="btn w-full" onClick={() => setReviewing(selected)}>Review priority and assign</button>
+          </section>
+        )}
+      </div>
     </>
   )
 }

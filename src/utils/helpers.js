@@ -1,4 +1,6 @@
 export const HR = 3600000
+export const STATUSES = ['Pending', 'In Progress', 'For Verification', 'Completed']
+export const PRIORITY_RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 }
 export const fmt = (ms) => new Date(ms).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 export const ACTIVE = ['In Progress', 'For Verification']
 export const workload = (concerns, name) => concerns.filter((c) => c.assigned === name && ACTIVE.includes(c.status)).length

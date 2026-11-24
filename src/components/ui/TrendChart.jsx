@@ -1,27 +1,30 @@
-// Line chart: cumulative reports received vs repairs resolved. The shaded gap = open backlog.
+import { useId } from 'react'
+
 export default function TrendChart({ data }) {
-  const W = 600, H = 270, L = 36, R = 28, T = 20, B = 34, n = data.length
-  const max = Math.ceil(Math.max(...data.map((d) => d.reported)) / 10) * 10
-  const x = (i) => L + (i * (W - L - R)) / (n - 1)
-  const y = (v) => T + (1 - v / max) * (H - T - B)
-  const line = (k) => data.map((d, i) => `${x(i)},${y(d[k])}`).join(' ')
-  const gap = `${line('reported')} ${[...data].reverse().map((d, i) => `${x(n - 1 - i)},${y(d.resolved)}`).join(' ')}`
-  const ticks = Array.from({ length: max / 10 + 1 }, (_, i) => i * 10)
-  const end = data[n - 1]
+  const description = useId()
+  const top = Math.max(4, ...data.map((point) => point.reported))
+  const step = Math.ceil(top / 4)
+  const max = step * 4
+  const x = (index) => 32 + index * 49
+  const y = (value) => 16 + (1 - value / max) * 127
+  const points = (field, reverse = false) => data.map((_, index) => {
+    const i = reverse ? data.length - 1 - index : index
+    return `${x(i)},${y(data[i][field])}`
+  }).join(' ')
+  const latest = data[data.length - 1]
+
   return (
-    <div>
-      <div className="flex gap-4 text-xs mb-2"><span className="flex items-center gap-1"><i className="w-3 h-1 bg-red-500 inline-block" />Reports received</span><span className="flex items-center gap-1"><i className="w-3 h-1 bg-emerald-600 inline-block" />Repairs resolved</span><span className="flex items-center gap-1"><i className="w-3 h-3 bg-red-100 inline-block" />Open backlog (gap)</span></div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        {ticks.map((t) => <g key={t}><line x1={L} x2={W - R} y1={y(t)} y2={y(t)} stroke="#e2e8f0" /><text x={L - 6} y={y(t) + 3} fontSize="10" textAnchor="end" fill="#94a3b8">{t}</text></g>)}
-        <polygon points={gap} fill="#fee2e2" opacity=".8" />
-        <polyline points={line('reported')} fill="none" stroke="#ef4444" strokeWidth="2.5" />
-        <polyline points={line('resolved')} fill="none" stroke="#059669" strokeWidth="2.5" />
-        {data.map((d, i) => <g key={d.label}>
-          <circle cx={x(i)} cy={y(d.reported)} r="4" fill="#ef4444" /><text x={x(i)} y={y(d.reported) - 8} fontSize="11" fontWeight="700" textAnchor="middle" fill="#b91c1c">{d.reported}</text>
-          <circle cx={x(i)} cy={y(d.resolved)} r="4" fill="#059669" /><text x={x(i)} y={y(d.resolved) + 16} fontSize="11" fontWeight="700" textAnchor="middle" fill="#047857">{d.resolved}</text>
-          <text x={x(i)} y={H - 10} fontSize="10" textAnchor="middle" fill="#64748b">{d.label}</text></g>)}
-        <text x={x(n - 1) - 8} y={(y(end.reported) + y(end.resolved)) / 2 + 4} fontSize="12" fontWeight="700" textAnchor="end" fill="#b91c1c">{end.backlog} open</text>
+    <figure>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm"><span className="flex items-center gap-2"><i aria-hidden="true" className="h-1 w-4 rounded bg-slate-600" />Reports received</span><span className="flex items-center gap-2"><i aria-hidden="true" className="h-1 w-4 rounded bg-brand" />Repairs completed</span></div>
+      <svg viewBox="0 0 354 175" role="img" aria-labelledby={description} className="mx-auto mt-2 block w-full max-w-xl">
+        <title id={description}>{data.map((point) => `${point.label}, ${point.reported} reported and ${point.resolved} completed`).join('. ')}</title>
+        {[0, step, step * 2, step * 3, max].map((tick) => <g key={tick}><line x1="32" x2="326" y1={y(tick)} y2={y(tick)} stroke="#e2e8f0" /><text x="25" y={y(tick) + 4} fontSize="11" textAnchor="end" fill="#475569">{tick}</text></g>)}
+        <polygon points={`${points('reported')} ${points('resolved', true)}`} fill="#e6f4f3" />
+        <polyline points={points('reported')} fill="none" stroke="#475569" strokeWidth="2" />
+        <polyline points={points('resolved')} fill="none" stroke="#0b7f84" strokeWidth="2" />
+        {data.map((point, index) => <g key={point.label}><circle cx={x(index)} cy={y(point.reported)} r="2.5" fill="#475569" /><circle cx={x(index)} cy={y(point.resolved)} r="2.5" fill="#0b7f84" />{index % 2 === 0 && <text x={x(index)} y="163" fontSize="11" textAnchor="middle" fill="#475569">{point.label}</text>}</g>)}
       </svg>
-    </div>
+      <figcaption className="mt-1 text-sm text-slate-600"><strong className="text-ink">{latest.reported - latest.resolved}</strong> open as of {latest.label}</figcaption>
+    </figure>
   )
 }

@@ -1,17 +1,30 @@
-import { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import ConcernTable from '../components/ConcernTable.jsx'
-const TABS = ['All concerns', 'Pending', 'In Progress', 'For Verification', 'Completed']
-const RANK = { Critical: 0, High: 1, Medium: 2, Low: 3 }
+import Icon from '../components/ui/Icon.jsx'
+import { PRIORITY_RANK, STATUSES } from '../utils/helpers.js'
+
+const TABS = ['All concerns', ...STATUSES]
+
 export default function FacilityConcerns() {
-  const { concerns } = useApp()
-  const [tab, setTab] = useState(TABS[0]), [q, setQ] = useState('')
-  const rows = concerns.filter((c) => (tab === TABS[0] || c.status === tab) && (c.title + c.id).toLowerCase().includes(q.toLowerCase())).sort((a, b) => RANK[a.priority] - RANK[b.priority])
+  const { concerns, concernFilter, setConcernFilter, concernQuery, setConcernQuery } = useApp()
+  const query = concernQuery.trim().toLowerCase()
+  const rows = concerns
+    .filter((c) => (concernFilter === TABS[0] || c.status === concernFilter) && [c.title, c.id, c.facility, c.loc, c.category, c.assigned].some((value) => value?.toLowerCase().includes(query)))
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || b.createdAt - a.createdAt)
+
   return (
     <>
-      <div><p className="text-[10px] font-bold text-brand">CAMPUS OPERATIONS</p><h1 className="text-2xl font-bold">Facility concerns</h1><p className="text-xs text-slate-500">One place to review, prioritize, route, and verify every campus concern.</p></div>
-      <div className="flex gap-2 flex-wrap">{TABS.map((t) => <button key={t} onClick={() => setTab(t)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${tab === t ? 'bg-navy text-white' : 'bg-white border-slate-200'}`}>{t} {t !== TABS[0] && <span className="opacity-60">{concerns.filter((c) => c.status === t).length}</span>}</button>)}</div>
-      <div className="card p-4 space-y-3"><input className="input max-w-sm" placeholder="Search concern or report ID" value={q} onChange={(e) => setQ(e.target.value)} /><ConcernTable rows={rows} /><p className="text-[11px] text-slate-400 px-3">Showing {rows.length} concerns · Priority: highest first</p></div>
+      <div><h1 className="page-title">Facility concerns</h1><p className="page-description">Review incoming reports, assign repairs, and verify completed work.</p></div>
+      <section className="card space-y-4 p-4 sm:p-5" aria-label="Concern queue">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Filter by status">
+          {TABS.map((status) => <button key={status} type="button" onClick={() => setConcernFilter(status)} aria-pressed={concernFilter === status} className="choice px-3">{status} <span className="ml-1 text-xs text-slate-600">{status === TABS[0] ? concerns.length : concerns.filter((c) => c.status === status).length}</span></button>)}
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <div className="w-full sm:max-w-sm"><label htmlFor="concern-search" className="label">Search concerns</label><div className="relative"><Icon name="search" className="pointer-events-none absolute left-3 top-3.5 size-4 text-slate-600" /><input id="concern-search" type="search" className="input pl-9" placeholder="Title, report ID, location or staff" value={concernQuery} onChange={(e) => setConcernQuery(e.target.value)} /></div></div>
+          <p className="pb-1 text-sm text-slate-600" role="status">{rows.length} {rows.length === 1 ? 'concern' : 'concerns'} · Highest priority first</p>
+        </div>
+        <ConcernTable rows={rows} empty={query ? 'No concerns match your search.' : 'No concerns in this status.'} />
+      </section>
     </>
   )
 }

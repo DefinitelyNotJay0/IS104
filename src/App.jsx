@@ -12,6 +12,6 @@ const pages = { dashboard: Dashboard, report: ReportProblem, concerns: FacilityC
 export default function App() {
   const { user, page } = useApp()
   if (!user) return <AuthPage />
-  const Page = pages[page] || Dashboard
+  const Page = (page === 'report' && user.role !== 'user' ? null : pages[page]) || Dashboard
   return <AppLayout><Page /><ReviewModal /></AppLayout>
 }

@@ -1,16 +1,41 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-body { @apply bg-[#eef4f4] text-ink font-sans antialiased; }
+body { @apply bg-[#f4f7fa] text-ink font-sans antialiased; }
+body:has(dialog[open]) { overflow: hidden; }
 @layer components {
-  .card { @apply bg-white border border-slate-200 rounded-xl shadow-sm; }
-  .btn { @apply inline-flex items-center gap-2 bg-brand hover:bg-brand-dark text-white text-sm font-semibold px-4 py-2 rounded-lg transition; }
-  .btn-ghost { @apply inline-flex items-center gap-2 bg-white border border-slate-200 text-ink text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-50; }
-  .input { @apply w-full border border-slate-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/30; }
-  .label { @apply block text-xs font-semibold mb-1; }
+  .card { @apply min-w-0 bg-white border border-slate-200 rounded-2xl shadow-sm; }
+  .btn { @apply inline-flex min-h-11 items-center justify-center gap-2 bg-brand-dark hover:bg-[#075055] text-white text-sm font-semibold px-4 py-2 rounded-xl transition; }
+  .btn-ghost { @apply inline-flex min-h-11 items-center justify-center gap-2 bg-white border border-slate-300 text-ink text-sm font-semibold px-4 py-2 rounded-xl hover:bg-slate-50; }
+  .input { @apply w-full min-w-0 min-h-11 border border-slate-300 rounded-xl px-3 py-2 text-base sm:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand/40; }
+  .label { @apply block text-sm font-semibold mb-1.5; }
+  .page-title { @apply text-2xl sm:text-3xl font-bold tracking-tight leading-tight; }
+  .page-description { @apply mt-2 max-w-2xl text-sm leading-relaxed text-slate-600; }
+  .section-title { @apply text-base font-bold tracking-tight; }
+  .icon-button { @apply inline-grid size-11 shrink-0 place-items-center rounded-xl hover:bg-slate-100; }
+  .choice { @apply min-h-11 rounded-xl border border-slate-300 px-2 py-2 text-sm font-medium hover:bg-slate-50; }
+  .choice[aria-pressed="true"] { @apply border-brand bg-brand-soft text-brand-dark font-semibold; }
+}
+@layer base {
+  :focus-visible { @apply outline outline-2 outline-offset-2 outline-brand; }
+  h1, h2, h3, p, td, dd, button { overflow-wrap: anywhere; }
+}
+@container (min-width: 46rem) {
+  .records-cards:not(.history-cards) { display: none; }
+  .records-table:not(.history-table) { display: block; }
+}
+@container (min-width: 54rem) {
+  .history-cards { display: none; }
+  .history-table { display: block; }
 }
 @media print {
-  body * { visibility: hidden; }
-  #report-preview, #report-preview * { visibility: visible; }
-  #report-preview { position: absolute; left: 0; top: 0; width: 100%; border: none; box-shadow: none; }
+  body { background: white; }
+  body:has(#report-preview) *:not(:has(#report-preview), #report-preview, #report-preview *) { display: none; }
+  body :has(#report-preview) { display: block; padding: 0; margin: 0; max-width: none; min-height: 0; border: none; box-shadow: none; }
+  #report-preview { width: 100%; margin: 0; padding: 0; border: none; box-shadow: none; }
+  #report-preview .report-table { overflow: visible; }
+  #report-preview table { min-width: 0; }
+  #report-preview th, #report-preview td { padding: 0.25rem; }
+  #report-preview tr { break-inside: avoid; }
 }
+@media print { .no-print { display: none !important; } }

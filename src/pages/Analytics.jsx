@@ -1,40 +1,50 @@
 import StatCard from '../components/ui/StatCard.jsx'
 import TrendChart from '../components/ui/TrendChart.jsx'
-import Badge from '../components/ui/Badge.jsx'
 import ReportGenerator from '../components/ReportGenerator.jsx'
+import ConcernTable from '../components/ConcernTable.jsx'
 import { useApp } from '../context/AppContext.jsx'
-import { weekly, facilities, categories, staff } from '../data/mock.js'
-import { summarize } from '../utils/analytics.js'
-import { fmt, workload } from '../utils/helpers.js'
-const TONE = { bad: 'border-red-300 bg-red-50', warn: 'border-amber-300 bg-amber-50', info: 'border-blue-200 bg-blue-50', good: 'border-emerald-300 bg-emerald-50' }
-const ICON = { bad: '🔴', warn: '🟠', info: '🔵', good: '🟢' }
-const pct = (a, b) => Math.round((a / b) * 100)
+import { facilities, categories } from '../data/mock.js'
+import { percentage, summarize } from '../utils/analytics.js'
+
+const hours = (value) => value === null ? '—' : `${value} h`
+
 export default function Analytics() {
-  const { concerns } = useApp()
-  const s = summarize({ concerns, weekly, facilities, categories, staff: staff.map((m) => ({ ...m, active: workload(concerns, m.name) })) })
-  const log = concerns.filter((c) => c.status === 'Completed').sort((a, b) => b.doneAt - a.doneAt)
+  const { concerns, openConcernQueue } = useApp()
+  const stats = summarize({ concerns, facilities, categories })
+  const busiest = [...stats.facilities].sort((a, b) => b.open - a.open)[0]
+
   return (
     <>
-      <div><p className="text-[10px] font-bold text-brand">CAMPUS OPERATIONS</p><h1 className="text-2xl font-bold">Insights that improve campus care.</h1><p className="text-xs text-slate-500">Reporting period Oct 1 – 16, 2026 · analysis is computed automatically from report data.</p></div>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4"><StatCard label="Total Reports" value={s.total} note={`${s.open} still open`} /><StatCard label="Completion rate" value={`${s.rate}%`} note={`${s.done} completed out of ${s.total}`} /><StatCard label="Avg. response time" value={`${s.responseHrs} hrs`} note="Report → assigned to staff" /><StatCard label="Avg. completion time" value={`${s.completionHrs} hrs`} note="Report → verified completed" /></div>
-
-      <div className="card p-5"><b className="text-sm">What the data says</b><p className="text-xs text-slate-500 mb-3">Auto-generated findings and recommended actions.</p>
-        <div className="grid md:grid-cols-2 gap-3">{s.insights.map((i) => <div key={i.title} className={`border rounded-lg p-3 ${TONE[i.tone]}`}><p className="text-sm font-bold">{ICON[i.tone]} {i.title}</p><p className="text-xs text-slate-600 mt-1">{i.detail}</p><p className="text-xs mt-2"><b>Recommended:</b> {i.action}</p></div>)}</div></div>
-
-      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4">
-        <div className="card p-5"><b className="text-sm">Are we keeping up with reports?</b><p className="text-xs text-slate-500 mb-3">Running totals. The wider the red gap, the bigger the backlog.</p><TrendChart data={s.series} /></div>
-        <div className="card p-5"><b className="text-sm">Facility performance</b><p className="text-xs text-slate-500 mb-3">Share of reports already completed.</p>
-          <div className="space-y-4">{facilities.map((f) => { const p = pct(f.done, f.total); return <div key={f.name} className="text-xs"><div className="flex justify-between"><b>{f.name}</b><span>{p}% · {f.total - f.done} open</span></div><div className="h-2 bg-slate-100 rounded mt-1"><div className={`h-2 rounded ${p >= 60 ? 'bg-emerald-600' : p >= 50 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${p}%` }} /></div></div> })}</div></div>
+      <div><h1 className="page-title">Analytics and history</h1><p className="page-description">See repair performance, review completed concerns, and export reports.</p></div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard label="Total reports" value={stats.total} note={`${stats.total - stats.done} open`} />
+        <StatCard label="Completion rate" value={`${stats.rate}%`} note={`${stats.done} of ${stats.total} completed`} />
+        <StatCard label="Average response" value={hours(stats.responseHrs)} note="Report to assignment" />
+        <StatCard label="Average completion" value={hours(stats.completionHrs)} note="Report to verified completion" />
       </div>
-
-      <div className="card p-5"><b className="text-sm">Problem categories</b><p className="text-xs text-slate-500 mb-3">Which problems are most common, and which take longest to fix.</p>
-        <table className="w-full text-sm"><thead className="text-[10px] uppercase text-slate-400 text-left"><tr><th className="py-2">Category</th><th>Reports</th><th>Share</th><th>Completed</th><th>Avg. repair time</th></tr></thead>
-          <tbody>{[...categories].sort((a, b) => b.total - a.total).map((c) => <tr key={c.name} className="border-t"><td className="py-2 font-semibold">{c.name}</td><td>{c.total}</td><td className="w-48"><div className="flex items-center gap-2"><div className="h-2 bg-slate-100 rounded flex-1"><div className="h-2 bg-brand rounded" style={{ width: `${pct(c.total, s.total)}%` }} /></div><span className="text-xs">{pct(c.total, s.total)}%</span></div></td><td>{pct(c.done, c.total)}%</td><td className={c.avgDays > 2 ? 'text-red-600 font-bold' : ''}>{c.avgDays} days</td></tr>)}</tbody></table></div>
-
-      <div className="card p-5"><b className="text-sm">Maintenance history log</b><p className="text-xs text-slate-500 mb-3">Verified repairs, newest first.</p>
-        <table className="w-full text-sm"><thead className="text-[10px] uppercase text-slate-400 text-left"><tr><th className="py-2">Concern</th><th>Completed by</th><th>Completed on</th><th>Response</th><th>Time to complete</th><th>Status</th></tr></thead>
-          <tbody>{log.map((c) => <tr key={c.id} className="border-t"><td className="py-2"><span className="text-brand text-[10px] font-bold">{c.id}</span> <b>{c.title}</b><div className="text-[11px] text-slate-400">{c.facility} · {c.loc}</div></td><td>{c.assigned}</td><td>{fmt(c.doneAt)}</td><td>{Math.round((c.assignedAt - c.createdAt) / 360000) / 10} hrs</td><td>{Math.round((c.doneAt - c.createdAt) / 360000) / 10} hrs</td><td><Badge value="Completed" /></td></tr>)}</tbody></table></div>
-
+      {stats.urgent.length > 0 && <div className="flex flex-wrap items-center justify-between gap-x-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950"><p><strong>{stats.urgent.length}</strong> high-priority {stats.urgent.length === 1 ? 'concern is' : 'concerns are'} waiting for review.</p><button type="button" className="min-h-11 font-semibold" onClick={() => openConcernQueue('Pending')}>Review queue →</button></div>}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <section className="card p-4 sm:p-5"><h2 className="section-title">Reports and completed repairs</h2><p className="mb-4 mt-1 text-sm text-slate-600">Cumulative totals over the last 7 days.</p><TrendChart data={stats.series} /></section>
+        <section className="card p-4 sm:p-5">
+          <h2 className="section-title">Facility performance</h2>
+          <p className="mb-4 mt-1 text-sm text-slate-600">{busiest.open > 0 ? `${busiest.name} has ${busiest.open} open, the most of any facility.` : 'No facilities have open concerns.'}</p>
+          <ul className="space-y-4">{stats.facilities.map((facility) => {
+            const rate = percentage(facility.done, facility.total)
+            return <li key={facility.name} className="text-sm"><div className="flex flex-wrap justify-between gap-x-2"><strong>{facility.name}</strong><span className="text-slate-600">{facility.total ? `${rate}% completed · ${facility.open} open` : 'No reports'}</span></div><div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden="true"><div className="h-full rounded-full bg-brand" style={{ width: `${rate}%` }} /></div></li>
+          })}</ul>
+        </section>
+      </div>
+      <section className="card p-4 sm:p-5">
+        <h2 className="section-title">Problem categories</h2>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+          {stats.categories.map((category) => <div key={category.name} className="rounded-xl border border-slate-200 bg-slate-50 p-3"><h3 className="font-semibold">{category.name}</h3><dl className="mt-2 space-y-1 text-sm">{[['Reports', category.total], ['Completed', category.done], ['Average repair time', category.avgDays === null ? '—' : `${category.avgDays} d`]].map(([label, value]) => <div key={label} className="flex justify-between gap-2"><dt className="text-slate-600">{label}</dt><dd className="font-semibold">{value}</dd></div>)}</dl></div>)}
+        </div>
+      </section>
+      <section className="card p-4 sm:p-5">
+        <h2 className="section-title">Maintenance history</h2>
+        <p className="mb-4 mt-1 text-sm text-slate-600">Verified repairs, newest first.</p>
+        <ConcernTable rows={stats.history} empty="No repairs have been verified yet." completionDetails />
+      </section>
       <ReportGenerator />
     </>
   )

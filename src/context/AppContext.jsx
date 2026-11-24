@@ -10,13 +10,27 @@ export function AppProvider({ children }) {
   const [notices, setNotices] = useState(seedNotices)
   const [reviewing, setReviewing] = useState(null)
   const [selectedId, setSelectedId] = useState(null)
+  const [concernFilter, setConcernFilter] = useState('All concerns')
+  const [concernQuery, setConcernQuery] = useState('')
   const patch = (id, fn) => setConcerns((l) => l.map((c) => (c.id === id ? fn(c) : c)))
   const notify = (to, text, ref) => setNotices((n) => [{ id: Date.now() + Math.random(), to, text, ref, at: Date.now(), read: false }, ...n])
   const isMine = (n) => user && (n.to === user.name || n.to === user.role)
   const myNotices = user ? notices.filter(isMine) : []
-  const login = (u) => { setUser(u); setPage('dashboard') }
+  const login = (u) => {
+    setUser(u)
+    setPage('dashboard')
+    setSelectedId(null)
+    setReviewing(null)
+    setConcernFilter('All concerns')
+    setConcernQuery('')
+  }
   const logout = () => setUser(null)
   const open = (id) => { setSelectedId(id); setPage('status') }
+  const openConcernQueue = (status = 'All concerns') => {
+    setConcernFilter(status)
+    setConcernQuery('')
+    setPage('concerns')
+  }
 
   // Scope 1: user files a detailed report (location, description, photo)
   const addConcern = (c) => {
@@ -24,6 +38,7 @@ export function AppProvider({ children }) {
     setConcerns((l) => [{ ...c, id, status: 'Pending', assigned: null, reporter: user.name, createdAt: Date.now(), progress: 0, log: [ev('Concern reported', `${user.name} reported: ${c.title}.`)] }, ...l])
     notify('admin', `New concern ${id}: ${c.title}`, id)
     notify(user.name, `We received your report ${id}. An administrator will review it.`, id)
+    return id
   }
   // Scope 2 + 3: admin sets severity & urgency -> priority, then routes to maintenance personnel
   const assignConcern = (id, { priority, severity, urg, staffName, note }) => {
@@ -45,5 +60,5 @@ export function AppProvider({ children }) {
   }
   const confirmResolved = (id) => patch(id, (c) => ({ ...c, confirmed: true, log: [...c.log, ev('Reporter confirmed', 'The reporting user confirmed the concern is resolved.')] }))
   const markRead = () => setNotices((n) => n.map((x) => (isMine(x) ? { ...x, read: true } : x)))
-  return <Ctx.Provider value={{ user, login, logout, page, setPage, concerns, addConcern, assignConcern, submitRepairReport, verifyConcern, confirmResolved, reviewing, setReviewing, selectedId, setSelectedId, open, myNotices, markRead }}>{children}</Ctx.Provider>
+  return <Ctx.Provider value={{ user, login, logout, page, setPage, concerns, addConcern, assignConcern, submitRepairReport, verifyConcern, confirmResolved, reviewing, setReviewing, selectedId, setSelectedId, open, myNotices, markRead, concernFilter, setConcernFilter, concernQuery, setConcernQuery, openConcernQueue }}>{children}</Ctx.Provider>
 }

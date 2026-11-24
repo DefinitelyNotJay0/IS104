@@ -27,14 +27,10 @@ export const staff = [
   { id: 3, name: 'Noel Cerbito Jr', role: 'IT & computer systems', skills: ['IT/PC Unit'] },
 ]
 export const facilities = [
-  { name: 'Library', total: 16, done: 8 }, { name: 'Classrooms', total: 14, done: 7 },
-  { name: 'Faculty Room', total: 6, done: 4 }, { name: 'Computer Lab', total: 12, done: 6 },
-]
-export const weekly = [
-  { label: 'Oct 1–4', reports: 9, done: 4 }, { label: 'Oct 5–9', reports: 13, done: 6 },
-  { label: 'Oct 8–12', reports: 14, done: 8 }, { label: 'Oct 13–16', reports: 12, done: 7 },
+  { name: 'Library' }, { name: 'Classrooms' },
+  { name: 'Faculty Room' }, { name: 'Computer Lab' },
 ]
 export const categories = [
-  { name: 'Electrical', total: 15, done: 8, avgDays: 1.8 }, { name: 'Plumbing', total: 11, done: 6, avgDays: 1.2 },
-  { name: 'Furniture', total: 9, done: 6, avgDays: 0.9 }, { name: 'IT/PC Unit', total: 13, done: 5, avgDays: 2.6 },
+  { name: 'Electrical' }, { name: 'Plumbing' },
+  { name: 'Furniture' }, { name: 'IT/PC Unit' },
 ]
